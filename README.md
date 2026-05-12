@@ -4,7 +4,9 @@
   <img src="assets/logo.png" alt="Polywave" width="600" />
 </p>
 
-[![Blackwell Systems](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems)
+<p align="center">
+  <a href="https://github.com/blackwell-systems"><img src="https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg" alt="Blackwell Systems" /></a>
+</p>
 
 **The coordination protocol for parallel AI agents that guarantees merge-conflict-free execution by construction.**
 
