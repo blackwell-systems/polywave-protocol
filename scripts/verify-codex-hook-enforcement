@@ -1,0 +1,427 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+codex_home="${CODEX_HOME:-$HOME/.codex}"
+config_file="${CODEX_CONFIG_FILE:-$codex_home/config.toml}"
+polywave_home="${POLYWAVE_CODEX_HOME:-$codex_home/polywave}"
+audit_dir="${POLYWAVE_HOOK_AUDIT_DIR:-$polywave_home/audit}"
+policy_hook="$polywave_home/hooks/pre_tool_use_bash_policy"
+audit_hook="$polywave_home/hooks/pre_tool_use_audit"
+apply_patch_hook="$polywave_home/hooks/pre_tool_use_apply_patch_policy"
+safe_edit_hook="$polywave_home/hooks/pre_tool_use_safe_edit_policy"
+
+pass_count=0
+warn_count=0
+
+pass() {
+  pass_count=$((pass_count + 1))
+  printf 'PASS %s\n' "$1"
+}
+
+warn() {
+  warn_count=$((warn_count + 1))
+  printf 'WARN %s\n' "$1"
+}
+
+fail() {
+  printf 'FAIL %s\n' "$1" >&2
+  exit 1
+}
+
+require_file() {
+  local path="$1"
+  [[ -f "$path" ]] || fail "missing file: $path"
+}
+
+require_executable() {
+  local path="$1"
+  [[ -x "$path" ]] || fail "missing executable hook: $path"
+}
+
+require_grep() {
+  local pattern="$1"
+  local path="$2"
+  local label="$3"
+  if grep -Eq "$pattern" "$path"; then
+    pass "$label"
+  else
+    fail "$label"
+  fi
+}
+
+json_value() {
+  local file="$1"
+  local expr="$2"
+  jq -r "$expr" "$file" 2>/dev/null || true
+}
+
+latest_pre_for_tool() {
+  local tool_name="$1"
+  find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "$tool_name" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done
+}
+
+latest_pre_for_tool_exact_command() {
+  local tool_name="$1"
+  local exact_command="$2"
+  find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "$tool_name" ]] && [[ "$(json_value "$file" '.tool_input.command // .toolInput.command // .tool_input.patch // .toolInput.patch // empty')" == "$exact_command" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done
+}
+
+latest_pre_for_command() {
+  local command="$1"
+  find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-Bash-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_input.command // .toolInput.command // empty')" == "$command" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done
+}
+
+post_count_for_tool_use_id() {
+  local tool_use_id="$1"
+  find "$audit_dir" -maxdepth 1 -type f -name '*-PostToolUse-*.json' 2>/dev/null \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_use_id // .toolUseId // empty')" == "$tool_use_id" ]]; then
+          printf '%s\n' "$file"
+        fi
+      done \
+    | wc -l \
+    | tr -d ' '
+}
+
+require_file "$config_file"
+require_executable "$policy_hook"
+require_executable "$audit_hook"
+require_executable "$apply_patch_hook"
+require_executable "$safe_edit_hook"
+command -v jq >/dev/null 2>&1 || fail "jq is required"
+pass "required config and hook executables exist"
+
+require_grep '^[[:space:]]*hooks[[:space:]]*=[[:space:]]*true[[:space:]]*$' "$config_file" "Codex hooks feature is enabled"
+require_grep 'pre_tool_use_bash_policy' "$config_file" "Bash policy hook is installed in Codex config"
+require_grep 'pre_tool_use_audit' "$config_file" "audit hook is installed in Codex config"
+require_grep 'pre_tool_use_apply_patch_policy' "$config_file" "apply_patch policy hook is installed in Codex config"
+require_grep 'pre_tool_use_safe_edit_policy' "$config_file" "safe_edit policy hook is installed in Codex config"
+require_grep 'mcp__lsp__\(safe_edit\|apply_edit\|safe_apply_edit\)' "$config_file" "shared LSP text edit matcher is installed in Codex config"
+require_grep 'pre_tool_use:0:0' "$config_file" "first PreToolUse hook has a trust state entry"
+require_grep 'pre_tool_use:1:0' "$config_file" "second PreToolUse hook has a trust state entry"
+require_grep 'pre_tool_use:2:0' "$config_file" "third PreToolUse hook has a trust state entry"
+require_grep 'pre_tool_use:3:0' "$config_file" "fourth PreToolUse hook has a trust state entry"
+require_grep 'post_tool_use:0:0' "$config_file" "PostToolUse hook has a trust state entry"
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+blocked_payload="$tmp_dir/blocked-git-stash.json"
+cat > "$blocked_payload" <<'JSON'
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git stash list"
+  }
+}
+JSON
+
+blocked_output="$("$policy_hook" < "$blocked_payload")"
+blocked_decision="$(printf '%s' "$blocked_output" | jq -r '.hookSpecificOutput.permissionDecision // empty')"
+blocked_reason="$(printf '%s' "$blocked_output" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty')"
+[[ "$blocked_decision" == "deny" ]] || fail "policy hook did not deny git stash"
+[[ "$blocked_reason" == *"git stash"* ]] || fail "git stash denial reason did not mention git stash"
+pass "policy hook denies git stash commands"
+
+outside_payload="$tmp_dir/outside-worktree.json"
+cat > "$outside_payload" <<'JSON'
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "polywave": {
+    "assigned_worktree": "/tmp/polywave-assigned-worktree"
+  },
+  "tool_input": {
+    "command": "touch /tmp/polywave-outside-worktree"
+  }
+}
+JSON
+
+outside_output="$("$policy_hook" < "$outside_payload")"
+outside_decision="$(printf '%s' "$outside_output" | jq -r '.hookSpecificOutput.permissionDecision // empty')"
+[[ "$outside_decision" == "deny" ]] || fail "policy hook did not deny outside-worktree write"
+pass "policy hook denies outside-worktree write commands when assigned_worktree is present"
+
+allowed_payload="$tmp_dir/allowed.json"
+cat > "$allowed_payload" <<'JSON'
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "polywave": {
+    "assigned_worktree": "/tmp/polywave-assigned-worktree"
+  },
+  "tool_input": {
+    "command": "pwd"
+  }
+}
+JSON
+
+allowed_output="$("$policy_hook" < "$allowed_payload")"
+[[ -z "$allowed_output" ]] || fail "policy hook unexpectedly denied allowed command"
+pass "policy hook allows non-mutating in-worktree-safe commands"
+
+direct_audit_dir="$tmp_dir/audit"
+POLYWAVE_HOOK_AUDIT_DIR="$direct_audit_dir" "$audit_hook" < "$allowed_payload"
+direct_audit_count="$(find "$direct_audit_dir" -maxdepth 1 -type f -name '*.json' | wc -l | tr -d ' ')"
+[[ "$direct_audit_count" == "1" ]] || fail "audit hook did not write exactly one audit file"
+pass "audit hook writes payloads to the configured audit directory"
+
+if [[ -d "$audit_dir" ]]; then
+  observed_tools="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | while IFS= read -r file; do
+        json_value "$file" '.tool_name // .toolName // empty'
+      done \
+    | sed '/^$/d' \
+    | sort -u \
+    | tr '\n' ',' \
+    | sed 's/,$//')"
+  [[ -n "$observed_tools" ]] && pass "runtime audit observed tool surfaces: $observed_tools"
+
+  allowed_pre="$(latest_pre_for_command 'bash -lc pwd')"
+  if [[ -n "$allowed_pre" ]]; then
+    allowed_id="$(json_value "$allowed_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_posts="$(post_count_for_tool_use_id "$allowed_id")"
+    if [[ "$allowed_posts" -gt 0 ]]; then
+      pass "runtime audit contains an allowed Bash PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed Bash PreToolUse without matching PostToolUse: $allowed_pre"
+    fi
+  else
+    warn "runtime audit does not contain the manual proof command: bash -lc pwd"
+  fi
+
+  denied_pre="$(latest_pre_for_command 'git stash list')"
+  if [[ -n "$denied_pre" ]]; then
+    denied_id="$(json_value "$denied_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_posts="$(post_count_for_tool_use_id "$denied_id")"
+    if [[ "$denied_posts" == "0" ]]; then
+      pass "runtime audit contains denied git stash PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied git stash tool_use_id $denied_id"
+    fi
+  else
+    warn "runtime audit does not contain denied command proof: git stash list"
+  fi
+
+  apply_patch_pre="$(latest_pre_for_tool 'apply_patch')"
+  if [[ -n "$apply_patch_pre" ]]; then
+    apply_patch_id="$(json_value "$apply_patch_pre" '.tool_use_id // .toolUseId // empty')"
+    apply_patch_posts="$(post_count_for_tool_use_id "$apply_patch_id")"
+    if [[ "$apply_patch_posts" -gt 0 ]]; then
+      pass "runtime audit contains apply_patch PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has apply_patch PreToolUse without matching PostToolUse: $apply_patch_pre"
+    fi
+  else
+    warn "runtime audit does not contain apply_patch proof"
+  fi
+
+  denied_apply_patch_command="$(printf '%s\n' '*** Begin Patch' '*** Add File: /private/tmp/polywave-codex-exec-proof.txt' '+blocked-proof' '*** End Patch')"
+  denied_apply_patch_pre="$(latest_pre_for_tool_exact_command 'apply_patch' "$denied_apply_patch_command")"
+  if [[ -n "$denied_apply_patch_pre" ]]; then
+    denied_apply_patch_id="$(json_value "$denied_apply_patch_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_apply_patch_posts="$(post_count_for_tool_use_id "$denied_apply_patch_id")"
+    if [[ "$denied_apply_patch_posts" == "0" ]]; then
+      pass "runtime audit contains denied apply_patch PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied apply_patch tool_use_id $denied_apply_patch_id"
+    fi
+  else
+    warn "runtime audit does not contain denied apply_patch proof"
+  fi
+
+  mcp_pre="$(latest_pre_for_tool 'mcp__codebase_memory_mcp__list_projects')"
+  if [[ -n "$mcp_pre" ]]; then
+    mcp_id="$(json_value "$mcp_pre" '.tool_use_id // .toolUseId // empty')"
+    mcp_posts="$(post_count_for_tool_use_id "$mcp_id")"
+    if [[ "$mcp_posts" -gt 0 ]]; then
+      pass "runtime audit contains MCP PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has MCP PreToolUse without matching PostToolUse: $mcp_pre"
+    fi
+  else
+    warn "runtime audit does not contain MCP tool proof"
+  fi
+
+  allowed_safe_edit_file="/Users/dayna.blackwell/code/polywave-protocol/codex-hook-isolation-proof.md"
+  allowed_apply_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__apply_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$allowed_safe_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$allowed_apply_edit_pre" ]]; then
+    allowed_apply_edit_id="$(json_value "$allowed_apply_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_apply_edit_posts="$(post_count_for_tool_use_id "$allowed_apply_edit_id")"
+    if [[ "$allowed_apply_edit_posts" -gt 0 ]]; then
+      pass "runtime audit contains allowed mcp__lsp__apply_edit PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed mcp__lsp__apply_edit PreToolUse without matching PostToolUse: $allowed_apply_edit_pre"
+    fi
+  else
+    warn "runtime audit does not contain allowed mcp__lsp__apply_edit proof"
+  fi
+
+  allowed_safe_apply_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__safe_apply_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$allowed_safe_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$allowed_safe_apply_edit_pre" ]]; then
+    allowed_safe_apply_edit_id="$(json_value "$allowed_safe_apply_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_safe_apply_edit_posts="$(post_count_for_tool_use_id "$allowed_safe_apply_edit_id")"
+    if [[ "$allowed_safe_apply_edit_posts" -gt 0 ]]; then
+      pass "runtime audit contains allowed mcp__lsp__safe_apply_edit PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed mcp__lsp__safe_apply_edit PreToolUse without matching PostToolUse: $allowed_safe_apply_edit_pre"
+    fi
+  else
+    warn "runtime audit does not contain allowed mcp__lsp__safe_apply_edit proof"
+  fi
+
+  allowed_safe_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__safe_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$allowed_safe_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$allowed_safe_edit_pre" ]]; then
+    allowed_safe_edit_id="$(json_value "$allowed_safe_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_safe_edit_posts="$(post_count_for_tool_use_id "$allowed_safe_edit_id")"
+    if [[ "$allowed_safe_edit_posts" -gt 0 ]]; then
+      pass "runtime audit contains allowed mcp__lsp__safe_edit PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed mcp__lsp__safe_edit PreToolUse without matching PostToolUse: $allowed_safe_edit_pre"
+    fi
+  else
+    warn "runtime audit does not contain allowed mcp__lsp__safe_edit proof"
+  fi
+
+  denied_safe_edit_file="/private/tmp/polywave-safe-edit-proof-2.md"
+  denied_safe_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__safe_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$denied_safe_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$denied_safe_edit_pre" ]]; then
+    denied_safe_edit_id="$(json_value "$denied_safe_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_safe_edit_posts="$(post_count_for_tool_use_id "$denied_safe_edit_id")"
+    if [[ "$denied_safe_edit_posts" == "0" ]]; then
+      pass "runtime audit contains denied mcp__lsp__safe_edit PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied mcp__lsp__safe_edit tool_use_id $denied_safe_edit_id"
+    fi
+  else
+    warn "runtime audit does not contain denied mcp__lsp__safe_edit proof"
+  fi
+
+  denied_apply_edit_file="/private/tmp/polywave-apply-edit-proof.txt"
+  denied_apply_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__apply_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$denied_apply_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$denied_apply_edit_pre" ]]; then
+    denied_apply_edit_id="$(json_value "$denied_apply_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_apply_edit_posts="$(post_count_for_tool_use_id "$denied_apply_edit_id")"
+    if [[ "$denied_apply_edit_posts" == "0" ]]; then
+      pass "runtime audit contains denied mcp__lsp__apply_edit PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied mcp__lsp__apply_edit tool_use_id $denied_apply_edit_id"
+    fi
+  else
+    warn "runtime audit does not contain denied mcp__lsp__apply_edit proof"
+  fi
+
+  denied_safe_apply_edit_file="/private/tmp/polywave-safe-apply-edit-proof.txt"
+  denied_safe_apply_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__safe_apply_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$denied_safe_apply_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$denied_safe_apply_edit_pre" ]]; then
+    denied_safe_apply_edit_id="$(json_value "$denied_safe_apply_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_safe_apply_edit_posts="$(post_count_for_tool_use_id "$denied_safe_apply_edit_id")"
+    if [[ "$denied_safe_apply_edit_posts" == "0" ]]; then
+      pass "runtime audit contains denied mcp__lsp__safe_apply_edit PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied mcp__lsp__safe_apply_edit tool_use_id $denied_safe_apply_edit_id"
+    fi
+  else
+    warn "runtime audit does not contain denied mcp__lsp__safe_apply_edit proof"
+  fi
+
+  subagent_allowed_command="$(printf '%s\n' '*** Begin Patch' '*** Add File: /Users/dayna.blackwell/code/polywave-protocol/subagent-confinement-proof.txt' '+inside repo write probe' '*** End Patch')"
+  subagent_allowed_pre="$(latest_pre_for_tool_exact_command 'apply_patch' "$subagent_allowed_command")"
+  if [[ -n "$subagent_allowed_pre" ]]; then
+    subagent_allowed_id="$(json_value "$subagent_allowed_pre" '.tool_use_id // .toolUseId // empty')"
+    subagent_allowed_posts="$(post_count_for_tool_use_id "$subagent_allowed_id")"
+    if [[ "$subagent_allowed_posts" -gt 0 ]]; then
+      pass "runtime audit contains subagent in-repo apply_patch PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has subagent in-repo apply_patch PreToolUse without matching PostToolUse: $subagent_allowed_pre"
+    fi
+  else
+    warn "runtime audit does not contain subagent in-repo apply_patch proof"
+  fi
+
+  subagent_denied_command="$(printf '%s\n' '*** Begin Patch' '*** Add File: /private/tmp/polywave-subagent-outside-proof.txt' '+outside repo write probe' '*** End Patch')"
+  subagent_denied_pre="$(latest_pre_for_tool_exact_command 'apply_patch' "$subagent_denied_command")"
+  if [[ -n "$subagent_denied_pre" ]]; then
+    subagent_denied_id="$(json_value "$subagent_denied_pre" '.tool_use_id // .toolUseId // empty')"
+    subagent_denied_posts="$(post_count_for_tool_use_id "$subagent_denied_id")"
+    if [[ "$subagent_denied_posts" == "0" ]]; then
+      pass "runtime audit contains denied subagent apply_patch PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied subagent apply_patch tool_use_id $subagent_denied_id"
+    fi
+  else
+    warn "runtime audit does not contain denied subagent apply_patch proof"
+  fi
+else
+  warn "runtime audit directory does not exist: $audit_dir"
+fi
+
+if grep -Eq 'matcher = "\\^Bash\\$"' "$config_file"; then
+  warn "Known LSP mutation families still needing explicit proof are now: symbol rewrites and simulation commits with apply=true"
+fi
+
+printf 'Verified %s checks with %s warnings.\n' "$pass_count" "$warn_count"
