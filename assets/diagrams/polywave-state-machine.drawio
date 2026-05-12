@@ -1,0 +1,333 @@
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <!-- Title -->
+    <mxCell id="title" parent="1" style="text;html=1;align=center;fontStyle=1;fontSize=24;strokeColor=none;fillColor=none;" value="SAW Protocol State Machine" vertex="1">
+      <mxGeometry height="40" width="560" x="300" y="10" as="geometry"/>
+    </mxCell>
+
+    <!-- ==================== STATES ==================== -->
+
+    <!-- INTERVIEWING (optional entry) -->
+    <mxCell id="interviewing" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;dashed=1;" value="INTERVIEWING&lt;br&gt;&lt;i&gt;(optional)&lt;/i&gt;" vertex="1">
+      <mxGeometry height="60" width="180" x="80" y="80" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_PENDING -->
+    <mxCell id="scout_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=16;" value="SCOUT_PENDING" vertex="1">
+      <mxGeometry height="60" width="200" x="460" y="80" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_VALIDATING -->
+    <mxCell id="scout_validating" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;" value="SCOUT_VALIDATING" vertex="1">
+      <mxGeometry height="60" width="200" x="460" y="200" as="geometry"/>
+    </mxCell>
+
+    <!-- NOT_SUITABLE (terminal) -->
+    <mxCell id="not_suitable" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=16;" value="NOT_SUITABLE" vertex="1">
+      <mxGeometry height="60" width="180" x="780" y="140" as="geometry"/>
+    </mxCell>
+
+    <!-- REVIEWED -->
+    <mxCell id="reviewed" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=16;" value="REVIEWED&lt;br&gt;&lt;i&gt;interface freeze checkpoint&lt;/i&gt;" vertex="1">
+      <mxGeometry height="70" width="260" x="430" y="320" as="geometry"/>
+    </mxCell>
+
+    <!-- SCAFFOLD_PENDING -->
+    <mxCell id="scaffold_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#e1d5e7;strokeColor=#9673a6;" value="SCAFFOLD_PENDING" vertex="1">
+      <mxGeometry height="60" width="200" x="460" y="460" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_PENDING -->
+    <mxCell id="wave_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;" value="WAVE_PENDING" vertex="1">
+      <mxGeometry height="60" width="200" x="460" y="590" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_EXECUTING -->
+    <mxCell id="wave_executing" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;fontSize=16;" value="WAVE_EXECUTING&lt;br&gt;&lt;i style=&quot;font-weight:normal&quot;&gt;solo: main branch&lt;br&gt;multi: isolated worktrees&lt;/i&gt;" vertex="1">
+      <mxGeometry height="80" width="240" x="440" y="720" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_MERGING -->
+    <mxCell id="wave_merging" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;" value="WAVE_MERGING&lt;br&gt;&lt;i&gt;E11 predict + E25/E26 integration + merge + cleanup&lt;/i&gt;" vertex="1">
+      <mxGeometry height="70" width="300" x="410" y="870" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_VERIFIED -->
+    <mxCell id="wave_verified" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;" value="WAVE_VERIFIED" vertex="1">
+      <mxGeometry height="60" width="200" x="460" y="1010" as="geometry"/>
+    </mxCell>
+
+    <!-- BLOCKED -->
+    <mxCell id="blocked" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=16;" value="BLOCKED&lt;br&gt;&lt;i style=&quot;font-weight:normal&quot;&gt;human intervention required&lt;/i&gt;" vertex="1">
+      <mxGeometry height="70" width="200" x="820" y="725" as="geometry"/>
+    </mxCell>
+
+    <!-- COMPLETE (terminal) -->
+    <mxCell id="complete" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=16;" value="COMPLETE" vertex="1">
+      <mxGeometry height="60" width="200" x="460" y="1140" as="geometry"/>
+    </mxCell>
+
+    <!-- ==================== TRANSITIONS ==================== -->
+
+    <!-- INTERVIEWING → SCOUT_PENDING (manual, dashed) -->
+    <mxCell id="t_int_scout" edge="1" parent="1" source="interviewing" target="scout_pending" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;fontSize=13;" value="manual: /saw scout" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_PENDING → SCOUT_VALIDATING -->
+    <mxCell id="t_sp_sv" edge="1" parent="1" source="scout_pending" target="scout_validating" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="IMPL doc written" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_PENDING → NOT_SUITABLE -->
+    <mxCell id="t_sp_ns" edge="1" parent="1" source="scout_pending" target="not_suitable" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="suitability gate fails" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_VALIDATING → NOT_SUITABLE -->
+    <mxCell id="t_sv_ns" edge="1" parent="1" source="scout_validating" target="not_suitable" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="NOT_SUITABLE verdict" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_VALIDATING self-loop (E16 retry) -->
+    <mxCell id="t_sv_self" edge="1" parent="1" source="scout_validating" target="scout_validating" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;fontSize=12;" value="E16 retry" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="380" y="218"/>
+          <mxPoint x="380" y="242"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- SCOUT_VALIDATING → REVIEWED -->
+    <mxCell id="t_sv_rev" edge="1" parent="1" source="scout_validating" target="reviewed" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="validation passes" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- SCOUT_PENDING → REVIEWED (direct, structured output) -->
+    <mxCell id="t_sp_rev" edge="1" parent="1" source="scout_pending" target="reviewed" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;fontSize=12;" value="structured output&#xa;(skip validation)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="340" y="110"/>
+          <mxPoint x="340" y="320"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- REVIEWED revise contracts self-loop -->
+    <mxCell id="t_rev_self" edge="1" parent="1" source="reviewed" target="reviewed" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;fontSize=12;" value="revise contracts" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="760" y="341"/>
+          <mxPoint x="760" y="369"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- REVIEWED → SCAFFOLD_PENDING -->
+    <mxCell id="t_rev_scaf" edge="1" parent="1" source="reviewed" target="scaffold_pending" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="human approves&#xa;(scaffolds needed)" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- REVIEWED → WAVE_PENDING (no scaffolds, multi-agent) -->
+    <mxCell id="t_rev_wp" edge="1" parent="1" source="reviewed" target="wave_pending" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;" value="no scaffolds&#xa;(multi-agent)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="340" y="390"/>
+          <mxPoint x="340" y="620"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- REVIEWED → WAVE_EXECUTING (solo wave skip) -->
+    <mxCell id="t_rev_we" edge="1" parent="1" source="reviewed" target="wave_executing" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;fontSize=12;" value="solo wave&#xa;(skip worktrees)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="280" y="355"/>
+          <mxPoint x="280" y="720"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- REVIEWED → COMPLETE (direct closure) -->
+    <mxCell id="t_rev_comp" edge="1" parent="1" source="reviewed" target="complete" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;" value="close-impl&#xa;(no waves)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="220" y="355"/>
+          <mxPoint x="220" y="1170"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- REVIEWED → BLOCKED (pre-launch validation fails) -->
+    <mxCell id="t_rev_blk" edge="1" parent="1" source="reviewed" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;strokeColor=#b85450;" value="pre-launch&#xa;validation fails" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="920" y="390"/>
+          <mxPoint x="920" y="725"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- SCAFFOLD_PENDING → WAVE_PENDING -->
+    <mxCell id="t_scaf_wp" edge="1" parent="1" source="scaffold_pending" target="wave_pending" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="scaffold committed" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- SCAFFOLD_PENDING → WAVE_EXECUTING (solo skip) -->
+    <mxCell id="t_scaf_we" edge="1" parent="1" source="scaffold_pending" target="wave_executing" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;" value="solo wave" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="380" y="490"/>
+          <mxPoint x="380" y="760"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- SCAFFOLD_PENDING → BLOCKED -->
+    <mxCell id="t_scaf_blk" edge="1" parent="1" source="scaffold_pending" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=12;strokeColor=#b85450;" value="compile FAIL" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_PENDING → WAVE_EXECUTING -->
+    <mxCell id="t_wp_we" edge="1" parent="1" source="wave_pending" target="wave_executing" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="worktrees created&#xa;agents launched" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_PENDING → BLOCKED (E21A baseline fails) -->
+    <mxCell id="t_wp_blk" edge="1" parent="1" source="wave_pending" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=12;strokeColor=#b85450;" value="E21A baseline fails" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_EXECUTING → WAVE_MERGING (multi-agent) -->
+    <mxCell id="t_we_wm" edge="1" parent="1" source="wave_executing" target="wave_merging" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="agents complete" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_EXECUTING → WAVE_VERIFIED (solo skip merge) -->
+    <mxCell id="t_we_wv" edge="1" parent="1" source="wave_executing" target="wave_verified" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;" value="solo: skip merge" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="380" y="800"/>
+          <mxPoint x="380" y="1040"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- WAVE_EXECUTING → BLOCKED -->
+    <mxCell id="t_we_blk" edge="1" parent="1" source="wave_executing" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=12;strokeColor=#b85450;" value="agent partial/blocked" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_EXECUTING → COMPLETE (solo final wave) -->
+    <mxCell id="t_we_comp" edge="1" parent="1" source="wave_executing" target="complete" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;fontSize=12;" value="solo final wave&#xa;(direct complete)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="320" y="800"/>
+          <mxPoint x="320" y="1140"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- WAVE_MERGING → WAVE_VERIFIED -->
+    <mxCell id="t_wm_wv" edge="1" parent="1" source="wave_merging" target="wave_verified" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="merge + verify PASS" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_MERGING → BLOCKED -->
+    <mxCell id="t_wm_blk" edge="1" parent="1" source="wave_merging" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=12;strokeColor=#b85450;" value="merge/verify FAIL" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="920" y="905"/>
+          <mxPoint x="920" y="795"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- WAVE_VERIFIED → WAVE_PENDING (next wave, multi) -->
+    <mxCell id="t_wv_wp" edge="1" parent="1" source="wave_verified" target="wave_pending" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;" value="next wave (multi)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="760" y="1010"/>
+          <mxPoint x="760" y="620"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- WAVE_VERIFIED → WAVE_EXECUTING (next wave, solo) -->
+    <mxCell id="t_wv_we" edge="1" parent="1" source="wave_verified" target="wave_executing" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;" value="next wave (solo)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="790" y="1040"/>
+          <mxPoint x="790" y="760"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- WAVE_VERIFIED → COMPLETE -->
+    <mxCell id="t_wv_comp" edge="1" parent="1" source="wave_verified" target="complete" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" value="final wave" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- WAVE_VERIFIED → BLOCKED -->
+    <mxCell id="t_wv_blk" edge="1" parent="1" source="wave_verified" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;strokeColor=#b85450;" value="post-verification issue" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1060" y="1040"/>
+          <mxPoint x="1060" y="760"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- BLOCKED → WAVE_VERIFIED (fix + re-verify) -->
+    <mxCell id="t_blk_wv" edge="1" parent="1" source="blocked" target="wave_verified" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;fontSize=12;strokeColor=#82b366;" value="fix + re-verify" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="920" y="1010"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- BLOCKED → WAVE_EXECUTING (re-launch agent) -->
+    <mxCell id="t_blk_we" edge="1" parent="1" source="blocked" target="wave_executing" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;strokeColor=#82b366;" value="re-launch agent" vertex="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- BLOCKED → WAVE_PENDING (recreate worktrees) -->
+    <mxCell id="t_blk_wp" edge="1" parent="1" source="blocked" target="wave_pending" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;strokeColor=#82b366;" value="recreate worktrees" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="760" y="620"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- BLOCKED → REVIEWED (contract revision) -->
+    <mxCell id="t_blk_rev" edge="1" parent="1" source="blocked" target="reviewed" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;strokeColor=#82b366;" value="contract revision&#xa;(re-review)" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1060" y="355"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- SCOUT_VALIDATING → BLOCKED (retry exhausted) -->
+    <mxCell id="t_sv_blk" edge="1" parent="1" source="scout_validating" target="blocked" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;fontSize=12;strokeColor=#b85450;" value="retry exhausted" vertex="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1100" y="260"/>
+          <mxPoint x="1100" y="725"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- ==================== LEGEND ==================== -->
+    <mxCell id="legend_box" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;dashed=1;fontSize=12;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" value="&lt;b&gt;Legend&lt;/b&gt;&lt;br&gt;─── normal transition&lt;br&gt;- - - alternate/skip path&lt;br&gt;&lt;font color=&quot;#b85450&quot;&gt;─── failure path&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#82b366&quot;&gt;─── recovery path&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#82b366&quot;&gt;█&lt;/font&gt; checkpoint / terminal success&lt;br&gt;&lt;font color=&quot;#b85450&quot;&gt;█&lt;/font&gt; failure / blocked&lt;br&gt;&lt;font color=&quot;#6c8ebf&quot;&gt;█&lt;/font&gt; entry state&lt;br&gt;&lt;font color=&quot;#9673a6&quot;&gt;█&lt;/font&gt; scaffold / optional" vertex="1">
+      <mxGeometry height="190" width="220" x="40" y="900" as="geometry"/>
+    </mxCell>
+
+  </root>
+</mxGraphModel>
