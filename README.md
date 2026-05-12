@@ -10,6 +10,8 @@
 
 This repository contains the implementation-agnostic specification of the Polywave protocol. These documents define the coordination rules, correctness guarantees, and behavioral contracts that any Polywave implementation must satisfy, independent of the runtime, LLM provider, or tooling used.
 
+> **Using Claude Code?** Start at [polywave](https://github.com/blackwell-systems/polywave) for the Agent Skill and install guide. This repo is the protocol reference, not the entry point for users.
+
 ## The Core Guarantee
 
 No two agents in the same wave own the same file (I1: Disjoint File Ownership). This is not a convention or a preference. It is a hard constraint enforced before any worktree is created. Merge conflicts between parallel agents become structurally impossible.
