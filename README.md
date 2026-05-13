@@ -19,6 +19,8 @@ This repository contains the implementation-agnostic specification of the Polywa
 
 No two agents in the same wave own the same file (I1: Disjoint File Ownership). This is not a convention or a preference. It is a hard constraint enforced before any worktree is created. Merge conflicts between parallel agents become structurally impossible.
 
+Unlike frameworks that detect conflicts at merge time and attempt resolution (always lossy, often manual), Polywave makes conflicts structurally impossible before agents start. The file ownership partition is validated, the suitability gate passes, and only then are worktrees created. Safety comes from protocol enforcement, not agent cooperation.
+
 ## Protocol Documents
 
 Read these in order to understand the complete protocol:
