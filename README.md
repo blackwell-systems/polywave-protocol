@@ -36,7 +36,6 @@ Read these in order to understand the complete protocol:
 | [procedures.md](procedures.md) | Step-by-step procedures for all protocol phases |
 | [interview-mode.md](interview-mode.md) | E39: Structured interview mode for deterministic requirements gathering |
 | [observability-events.md](observability-events.md) | E40: Observability event emission schema |
-| [codex-hook-isolation-proof.md](codex-hook-isolation-proof.md) | Codex hook trust, audit, denial, and isolation-enforcement proof procedure |
 | [program-invariants.md](program-invariants.md) | P1-P5: Program-level invariants for multi-IMPL coordination |
 | [program-manifest.md](program-manifest.md) | PROGRAM manifest schema for coordinating multiple IMPLs |
 | [impl-manifest.schema.json](impl-manifest.schema.json) | JSON Schema for IMPL manifest validation |
