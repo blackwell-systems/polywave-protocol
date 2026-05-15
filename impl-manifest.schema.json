@@ -177,6 +177,11 @@
     "completion_date": {
       "type": "string",
       "description": "Date when the IMPL was completed (YYYY-MM-DD format)."
+    },
+    "injection_method": {
+      "type": "string",
+      "enum": ["hook", "manual-fallback", "unknown"],
+      "description": "How the Scout agent received its reference file content. Set by finalize-scout."
     }
   },
   "$defs": {
