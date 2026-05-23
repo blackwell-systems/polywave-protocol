@@ -275,8 +275,11 @@
         },
         "dependencies": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Agent IDs this agent depends on (from prior waves)."
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][2-9]?$"
+          },
+          "description": "Agent IDs this agent depends on (from prior waves). Must be uppercase agent letters (e.g. 'A', 'B2')."
         },
         "model": {
           "type": "string",
