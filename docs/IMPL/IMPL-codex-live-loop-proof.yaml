@@ -1,0 +1,19 @@
+title: Codex Live Loop Scout Proof
+feature_slug: codex-live-loop-proof
+feature: Minimal proof IMPL for validating the Codex live-loop scout path.
+repository: /Users/dayna.blackwell/code/polywave-protocol
+verdict: NOT_SUITABLE
+suitability_assessment: |
+    This proof request is intentionally too small to justify Polywave execution.
+    The validator rejects a one-agent, one-file SUITABLE plan as trivial scope
+    (`V047_TRIVIAL_SCOPE`). The minimal protocol-valid artifact is therefore a
+    NOT_SUITABLE manifest that proves the scout path can author a manifest in this
+    repository and pass `polywave-tools validate`.
+test_command: ""
+lint_command: ""
+file_ownership: []
+interface_contracts: []
+waves: []
+state: NOT_SUITABLE
+original_branch: main
+injection_method: manual-fallback

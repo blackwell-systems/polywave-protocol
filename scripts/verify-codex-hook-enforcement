@@ -117,7 +117,7 @@ require_grep 'pre_tool_use_bash_policy' "$config_file" "Bash policy hook is inst
 require_grep 'pre_tool_use_audit' "$config_file" "audit hook is installed in Codex config"
 require_grep 'pre_tool_use_apply_patch_policy' "$config_file" "apply_patch policy hook is installed in Codex config"
 require_grep 'pre_tool_use_safe_edit_policy' "$config_file" "safe_edit policy hook is installed in Codex config"
-require_grep 'mcp__lsp__\(safe_edit\|apply_edit\|safe_apply_edit\)' "$config_file" "shared LSP text edit matcher is installed in Codex config"
+require_grep 'mcp__lsp__\(safe_edit\|apply_edit\|safe_apply_edit\|simulate_edit\|replace_symbol_body\|safe_delete_symbol\|commit_session\)' "$config_file" "shared LSP file mutation matcher is installed in Codex config"
 require_grep 'pre_tool_use:0:0' "$config_file" "first PreToolUse hook has a trust state entry"
 require_grep 'pre_tool_use:1:0' "$config_file" "second PreToolUse hook has a trust state entry"
 require_grep 'pre_tool_use:2:0' "$config_file" "third PreToolUse hook has a trust state entry"
@@ -181,6 +181,24 @@ JSON
 allowed_output="$("$policy_hook" < "$allowed_payload")"
 [[ -z "$allowed_output" ]] || fail "policy hook unexpectedly denied allowed command"
 pass "policy hook allows non-mutating in-worktree-safe commands"
+
+commit_session_payload="$tmp_dir/commit-session.json"
+cat > "$commit_session_payload" <<'JSON'
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "mcp__lsp__commit_session",
+  "tool_input": {
+    "session_id": "example-session",
+    "apply": true,
+    "target": "disk"
+  }
+}
+JSON
+
+commit_session_output="$("$safe_edit_hook" < "$commit_session_payload")"
+commit_session_decision="$(printf '%s' "$commit_session_output" | jq -r '.hookSpecificOutput.permissionDecision // empty')"
+[[ "$commit_session_decision" == "deny" ]] || fail "shared LSP file mutation hook did not deny commit_session apply=true"
+pass "shared LSP file mutation hook denies commit_session apply=true without file-path context"
 
 direct_audit_dir="$tmp_dir/audit"
 POLYWAVE_HOOK_AUDIT_DIR="$direct_audit_dir" "$audit_hook" < "$allowed_payload"
@@ -266,6 +284,7 @@ if [[ -d "$audit_dir" ]]; then
   fi
 
   allowed_safe_edit_file="/Users/dayna.blackwell/code/polywave-protocol/codex-hook-isolation-proof.md"
+  allowed_replace_symbol_body_file="/Users/dayna.blackwell/code/polywave-protocol/.tmp-lsp-symbol-probe/probe.go"
   allowed_apply_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
     | sort -r \
     | while IFS= read -r file; do
@@ -324,6 +343,66 @@ if [[ -d "$audit_dir" ]]; then
     fi
   else
     warn "runtime audit does not contain allowed mcp__lsp__safe_edit proof"
+  fi
+
+  allowed_simulate_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__simulate_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "/Users/dayna.blackwell/code/polywave-protocol/.tmp-lsp-commit-probe/commit.go" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$allowed_simulate_edit_pre" ]]; then
+    allowed_simulate_edit_id="$(json_value "$allowed_simulate_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_simulate_edit_posts="$(post_count_for_tool_use_id "$allowed_simulate_edit_id")"
+    if [[ "$allowed_simulate_edit_posts" -gt 0 ]]; then
+      pass "runtime audit contains allowed mcp__lsp__simulate_edit PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed mcp__lsp__simulate_edit PreToolUse without matching PostToolUse: $allowed_simulate_edit_pre"
+    fi
+  else
+    warn "runtime audit does not contain allowed mcp__lsp__simulate_edit proof"
+  fi
+
+  allowed_replace_symbol_body_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__replace_symbol_body" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$allowed_replace_symbol_body_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$allowed_replace_symbol_body_pre" ]]; then
+    allowed_replace_symbol_body_id="$(json_value "$allowed_replace_symbol_body_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_replace_symbol_body_posts="$(post_count_for_tool_use_id "$allowed_replace_symbol_body_id")"
+    if [[ "$allowed_replace_symbol_body_posts" -gt 0 ]]; then
+      pass "runtime audit contains allowed mcp__lsp__replace_symbol_body PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed mcp__lsp__replace_symbol_body PreToolUse without matching PostToolUse: $allowed_replace_symbol_body_pre"
+    fi
+  else
+    warn "runtime audit does not contain allowed mcp__lsp__replace_symbol_body proof"
+  fi
+
+  allowed_safe_delete_symbol_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__safe_delete_symbol" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$allowed_replace_symbol_body_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$allowed_safe_delete_symbol_pre" ]]; then
+    allowed_safe_delete_symbol_id="$(json_value "$allowed_safe_delete_symbol_pre" '.tool_use_id // .toolUseId // empty')"
+    allowed_safe_delete_symbol_posts="$(post_count_for_tool_use_id "$allowed_safe_delete_symbol_id")"
+    if [[ "$allowed_safe_delete_symbol_posts" -gt 0 ]]; then
+      pass "runtime audit contains allowed mcp__lsp__safe_delete_symbol PreToolUse/PostToolUse pair"
+    else
+      warn "runtime audit has allowed mcp__lsp__safe_delete_symbol PreToolUse without matching PostToolUse: $allowed_safe_delete_symbol_pre"
+    fi
+  else
+    warn "runtime audit does not contain allowed mcp__lsp__safe_delete_symbol proof"
   fi
 
   denied_safe_edit_file="/private/tmp/polywave-safe-edit-proof-2.md"
@@ -389,6 +468,68 @@ if [[ -d "$audit_dir" ]]; then
     warn "runtime audit does not contain denied mcp__lsp__safe_apply_edit proof"
   fi
 
+  denied_replace_symbol_body_file="/private/tmp/polywave-symbol-proof.go"
+  denied_replace_symbol_body_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__replace_symbol_body" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$denied_replace_symbol_body_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$denied_replace_symbol_body_pre" ]]; then
+    denied_replace_symbol_body_id="$(json_value "$denied_replace_symbol_body_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_replace_symbol_body_posts="$(post_count_for_tool_use_id "$denied_replace_symbol_body_id")"
+    if [[ "$denied_replace_symbol_body_posts" == "0" ]]; then
+      pass "runtime audit contains denied mcp__lsp__replace_symbol_body PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied mcp__lsp__replace_symbol_body tool_use_id $denied_replace_symbol_body_id"
+    fi
+  else
+    warn "runtime audit does not contain denied mcp__lsp__replace_symbol_body proof"
+  fi
+
+  denied_safe_delete_symbol_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__safe_delete_symbol" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$denied_replace_symbol_body_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$denied_safe_delete_symbol_pre" ]]; then
+    denied_safe_delete_symbol_id="$(json_value "$denied_safe_delete_symbol_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_safe_delete_symbol_posts="$(post_count_for_tool_use_id "$denied_safe_delete_symbol_id")"
+    if [[ "$denied_safe_delete_symbol_posts" == "0" ]]; then
+      pass "runtime audit contains denied mcp__lsp__safe_delete_symbol PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied mcp__lsp__safe_delete_symbol tool_use_id $denied_safe_delete_symbol_id"
+    fi
+  else
+    warn "runtime audit does not contain denied mcp__lsp__safe_delete_symbol proof"
+  fi
+
+  denied_simulate_edit_file="/private/tmp/polywave-simulate-proof.go"
+  denied_simulate_edit_pre="$(find "$audit_dir" -maxdepth 1 -type f -name '*-PreToolUse-*.json' 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r file; do
+        if [[ "$(json_value "$file" '.tool_name // .toolName // empty')" == "mcp__lsp__simulate_edit" ]] && [[ "$(json_value "$file" '.tool_input.file_path // .toolInput.file_path // .tool_input.filePath // .toolInput.filePath // empty')" == "$denied_simulate_edit_file" ]]; then
+          printf '%s\n' "$file"
+          break
+        fi
+      done)"
+  if [[ -n "$denied_simulate_edit_pre" ]]; then
+    denied_simulate_edit_id="$(json_value "$denied_simulate_edit_pre" '.tool_use_id // .toolUseId // empty')"
+    denied_simulate_edit_posts="$(post_count_for_tool_use_id "$denied_simulate_edit_id")"
+    if [[ "$denied_simulate_edit_posts" == "0" ]]; then
+      pass "runtime audit contains denied mcp__lsp__simulate_edit PreToolUse with no successful PostToolUse"
+    else
+      fail "runtime audit contains a PostToolUse for denied mcp__lsp__simulate_edit tool_use_id $denied_simulate_edit_id"
+    fi
+  else
+    warn "runtime audit does not contain denied mcp__lsp__simulate_edit proof"
+  fi
+
   subagent_allowed_command="$(printf '%s\n' '*** Begin Patch' '*** Add File: /Users/dayna.blackwell/code/polywave-protocol/subagent-confinement-proof.txt' '+inside repo write probe' '*** End Patch')"
   subagent_allowed_pre="$(latest_pre_for_tool_exact_command 'apply_patch' "$subagent_allowed_command")"
   if [[ -n "$subagent_allowed_pre" ]]; then
@@ -418,10 +559,6 @@ if [[ -d "$audit_dir" ]]; then
   fi
 else
   warn "runtime audit directory does not exist: $audit_dir"
-fi
-
-if grep -Eq 'matcher = "\\^Bash\\$"' "$config_file"; then
-  warn "Known LSP mutation families still needing explicit proof are now: symbol rewrites and simulation commits with apply=true"
 fi
 
 printf 'Verified %s checks with %s warnings.\n' "$pass_count" "$warn_count"
