@@ -1,2 +1,7 @@
 .tmp-codex-home/
 subagent-confinement-proof.txt
+.codex-lsp-tmp/
+.tmp-lsp-*/
+.tmp-*/
+.codex-*
+.polywave-state/
